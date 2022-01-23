@@ -1,11 +1,11 @@
 # Audit Analytics
 This repository contains projects related to risk management:
+ - IT Audit Scripts
  - Continuous Audit / Continuous Monitoring (IT, Operational, and Financial Audits)
  - Risk Analytics & Metrics
 
 ## IT Audit Scripts - Data Gathering
-Technologies:
-
+### Technologies:
 *Databases*
  - DB2
  - Oracle
