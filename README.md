@@ -5,6 +5,7 @@ This repository contains projects related to risk management:
 
 ## IT Audit Scripts - Data Gathering
 Technologies:
+
 *Databases*
  - DB2
  - Oracle
