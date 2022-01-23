@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion:
+Outputs:
+  gluerole:
+    Description: reference name for role assumed by glue to perform etl
+    Value: !Ref GlueRole
+  rawbucket:
+    Description:
+    Value: !Ref RawBucket
+
+Resources:
+# GLUE WORKFLOWS
+  WorkflowA:
+    Type: AWS::Glue::Workflow
+    Properties:
+      DefaultRunProperties:
+        start_period: ''
+        end_period: ''
+      Description: Workflow A
+      Name: ETLWorkflowA
+# GLUE JOBS
+  PrepJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: 'pythonshell'
+        PythonVersion: '3'
+        ScriptLocation: "s3://xxxxxx/xxxx.py"
+      DefaultArguments:
+        "--job-bookmark-option": "job-bookmark-enable"
+        "--extra-py-files": "s3://xxxxxx/xxxxxx/xxx.egg"
+      ExecutionProperty:
+          MaxConcurrentRuns: 2
+        MaxRetries: 0
+        Name: PrepETL
+        Role: !Ref GlueRole
+  InventoryJob:
+      Type: AWS::Glue::Job
+      Properties:
+        Command:
+          Name: 'pythonshell'
+          PythonVersion: '3'
+          ScriptLocation: "s3://xxxxxx/xxxx.py"
+        DefaultArguments:
+          "--job-bookmark-option": "job-bookmark-enable"
+          "--extra-py-files": "s3://xxxxxx/xxxxxx/xxx.egg"
+        ExecutionProperty:
+            MaxConcurrentRuns: 2
+        Connections:
+          Connections:
+            - 'CAS DW'
+        MaxRetries: 0
+        Timeout: 5
+        Name: InventoryETL
+        Role: !Ref GlueRole
+# SPECTRUM TABLES
+  SpectrumDB:
+    Type: 'AWS::Glue::Database'
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: 'spectrum'
+  SpectrumInventoryTable:
+    Type: 'AWS::Glue::Table'
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref 'SpectrumDB'
+      TableInput:
+        Description: 'xxxxxx'
+        Name: 'inventory'
+        TableType: 'EXTERNAL_TABLE'
+        Parameters: {"classification": "csv", skip.header.line.count: 1}
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          Columns:
+              - Name:
+                Type: string
+              - Name:
+                Type: int
+              - Name:
+                Type: float
+              - Name:
+                Type: date
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          Location: !Join
+            - ''
+            - - "s3://"
+              - !Ref SpectrumBucket
+              - "/xxxxx/xxxxx"
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              seperatorChar: ","
+# GLUE TRIGGERS
+  Start:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Description:
+      Name: etl_start
+      Type: ON_DEMAND
+      WorkflowName: !Ref WorkflowA
+      Actions:
+          - JobName: !Ref PrepJob
+  Step1:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Description:
+      Name: etl_step1
+      Type: CONDITIONAL
+      WorkflowName: !Ref WorkflowA
+      Actions:
+          - JobName: !Ref PrepJob
+      Predicate:
+        Logical: AND
+        Conditions:
+          - LogicalOperator: EQUALS
+            JobName: !Ref PrepJob
+            State: SUCCEEDED
+    Step2:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Description:
+      Name: etl_step2
+      Type: CONDITIONAL
+      WorkflowName: !Ref WorkflowA
+      Actions:
+          - JobName: !Ref PrepJob
+      Predicate:
+        Logical: AND
+        Conditions:
+          - LogicalOperator: EQUALS
+            JobName: !Ref PrepJob
+            State: SUCCEEDED
+# S3 Buckets
+  RawBucket:
+    Type: AWS::S3:Bucket
+    Properties:
+      BucketName: 'etl-rawbucket'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+
+#IAM ROLES + POLICIES
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
