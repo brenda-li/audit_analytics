@@ -1,0 +1,36 @@
+cat /etc/passwd grep root > file_name.txt
+
+cat /etc/group
+
+cat /etc/netgroup
+
+# ===========
+# Passwords
+# ===========
+# Solaris
+cat /etc/shadow
+
+# AIX
+cat /etc/security/passwd
+
+# HP-UX
+cat /etc/securetty
+
+# ===================
+# Privileged Access
+# ===================
+# Sudoers File
+sudo cat /etc/sudoers
+
+cat /var/adm/sudolog
+
+# Lists out which other hosts have trust
+cat /etc/hosts.equiv
+
+for user in $(cut –f1 –d: /etc/passwd); do crontab –u $user –l; done
+
+# ===================
+# Cron Jobs
+# ===================
+# Job Schedule
+cat /etc/crontab

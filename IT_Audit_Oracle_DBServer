@@ -1,0 +1,2 @@
+$opatch Isinventory -detail -oh $CRS_HOME
+$opatch Isinventory -detail -oh $RDBMS_HOME
